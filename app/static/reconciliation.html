@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>发布对账 · 隐私预算去向</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="wrap">
+  <h1>发布对账 · 隐私预算去向</h1>
+  <div class="sub">
+    逐笔核对每次发布的社区、时间、单次扣额与累计花费 ｜
+    只展示发布元信息，不含住户记录或精确人数
+  </div>
+
+  <div class="card">
+    <div class="recon-head">
+      <h2>对账总览</h2>
+      <div class="row">
+        <a class="btn-link" href="/">← 返回查询页</a>
+        <button id="btn-refresh">刷新</button>
+      </div>
+    </div>
+    <div class="status-grid" style="margin-top:14px">
+      <div class="stat"><div class="k">发布笔数</div><div class="v" id="rc-count">—</div></div>
+      <div class="stat"><div class="k">可核验明细合计 ε</div><div class="v" id="rc-detail">—</div></div>
+      <div class="stat"><div class="k">旧结果已花费 ε</div><div class="v" id="rc-legacy">—</div></div>
+      <div class="stat"><div class="k">账本已花 ε</div><div class="v" id="rc-ledger">—</div></div>
+      <div class="stat"><div class="k">对账结论</div><div class="v" id="rc-verdict">—</div></div>
+    </div>
+    <div class="hint">
+      首次查询某社区时，预算扣减、带噪结果与发布明细在同一事务中一起提交；
+      重复查询只读缓存，不扣额、不添明细。旧库中已有结果却没有逐笔记录的，
+      保留其已花费预算并标注"无法逐笔核验"——单次扣额与累计花费留空，不伪造扣费。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>逐笔发布明细</h2>
+    <div id="rc-flags"></div>
+    <div class="scroll">
+      <table class="recon">
+        <thead>
+          <tr>
+            <th>#</th><th>社区</th><th>发布时间（UTC）</th>
+            <th class="num">单次扣额 ε</th><th class="num">累计花费 ε</th><th>核验</th>
+          </tr>
+        </thead>
+        <tbody id="rc-body"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="rc-empty" style="display:none">暂无发布记录：导入数据后首次查询某社区即产生一条明细。</div>
+  </div>
+</div>
+
+<script src="/static/recon.js"></script>
+<script>
+  document.getElementById('btn-refresh').onclick = () => window.DPRecon.load();
+  window.DPRecon.load();
+</script>
+</body>
+</html>

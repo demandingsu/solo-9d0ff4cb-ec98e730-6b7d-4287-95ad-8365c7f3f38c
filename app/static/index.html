@@ -4,43 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>社区参与户数 · 差分隐私查询</title>
-<style>
-  :root { --blue:#2563eb; --green:#16a34a; --red:#dc2626; --amber:#d97706; --gray:#6b7280; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: "PingFang SC","Microsoft YaHei",system-ui,sans-serif;
-         background:#f1f5f9; color:#1e293b; }
-  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
-  h1 { font-size: 22px; margin: 8px 0 4px; }
-  .sub { color: var(--gray); font-size: 13px; margin-bottom: 20px; }
-  .card { background:#fff; border-radius:12px; padding:20px; margin-bottom:16px;
-          box-shadow:0 1px 3px rgba(15,23,42,.08); }
-  .card h2 { font-size:16px; margin:0 0 12px; }
-  .status-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
-  .stat { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; }
-  .stat .k { font-size:12px; color:var(--gray); }
-  .stat .v { font-size:20px; font-weight:600; margin-top:4px; }
-  button { background:var(--blue); color:#fff; border:0; border-radius:8px;
-           padding:9px 18px; font-size:14px; cursor:pointer; }
-  button:hover { filter:brightness(1.08); }
-  button:disabled { background:#94a3b8; cursor:not-allowed; }
-  input[type=text] { padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px;
-                     font-size:14px; width:260px; }
-  input[type=file] { font-size:13px; }
-  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-  .msg { margin-top:12px; padding:10px 12px; border-radius:8px; font-size:14px; display:none; }
-  .msg.ok   { display:block; background:#f0fdf4; color:var(--green); border:1px solid #bbf7d0; }
-  .msg.err  { display:block; background:#fef2f2; color:var(--red);  border:1px solid #fecaca; }
-  .msg.warn { display:block; background:#fffbeb; color:var(--amber); border:1px solid #fde68a; }
-  .result { margin-top:14px; display:none; background:#eff6ff; border:1px solid #bfdbfe;
-            border-radius:10px; padding:14px; }
-  .result.show { display:block; }
-  .result .num { font-size:30px; font-weight:700; color:var(--blue); }
-  .badge { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; margin-left:8px; }
-  .badge.charge { background:#fee2e2; color:var(--red); }
-  .badge.cache  { background:#dcfce7; color:var(--green); }
-  .hint { font-size:12px; color:var(--gray); margin-top:8px; line-height:1.7; }
-  code { background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:12px; }
-</style>
+<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div class="wrap">
@@ -94,6 +58,18 @@
       <div class="hint" id="r-budget"></div>
     </div>
   </div>
+
+  <div class="card">
+    <div class="recon-head">
+      <h2>③ 发布对账（隐私预算去向）</h2>
+      <a class="btn-link" href="/reconciliation">打开独立对账页 →</a>
+    </div>
+    <div class="hint">
+      独立页面逐笔列出每次新发布的社区、发布时间、单次扣额与累计花费，并对照预算账本指出不一致。
+      只展示发布元信息，<b>不含住户记录或精确人数</b>。
+      旧库中已有结果但缺少逐笔记录的部分，仅保留其已花费预算并标注"无法逐笔核验"，不会补造扣费明细。
+    </div>
+  </div>
 </div>
 
 <script>
@@ -145,8 +121,8 @@ document.getElementById('btn-query').onclick = async () => {
   });
   if (resp.ok) {
     const j = await resp.json();
-    showMsg('query-msg', 'ok', '');
-    document.getElementById('query-msg').style.display = 'none';
+    document.getElementById('query-msg').className = 'msg';
+    document.getElementById('query-msg').textContent = '';
     document.getElementById('r-community').textContent = j.community + ' 参与户数（含噪声）';
     document.getElementById('r-count').textContent = '≈ ' + j.noisy_count.toFixed(2) + ' 户';
     const badge = document.getElementById('r-badge');
@@ -162,6 +138,10 @@ document.getElementById('btn-query').onclick = async () => {
   }
   refreshStatus();
 };
+
+document.getElementById('community').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btn-query').click();
+});
 
 document.getElementById('community').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('btn-query').click();
