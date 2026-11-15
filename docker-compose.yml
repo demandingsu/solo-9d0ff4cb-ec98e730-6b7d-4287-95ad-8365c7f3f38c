@@ -1,0 +1,28 @@
+name: dp-community-survey
+
+# 两个独立的服务进程（app1 / app2），共享同一命名卷上的 SQLite 数据库，
+# 用于验证"多进程同时查询也不超隐私预算"：预算扣减与结果写库在同一事务完成，
+# BEGIN IMMEDIATE 保证跨进程串行化。
+services:
+  app1:
+    build: ./app
+    ports:
+      - "8001:8000"
+    environment:
+      DB_PATH: /data/dp.db
+    volumes:
+      - dp-data:/data
+    restart: unless-stopped
+
+  app2:
+    build: ./app
+    ports:
+      - "8002:8000"
+    environment:
+      DB_PATH: /data/dp.db
+    volumes:
+      - dp-data:/data
+    restart: unless-stopped
+
+volumes:
+  dp-data:

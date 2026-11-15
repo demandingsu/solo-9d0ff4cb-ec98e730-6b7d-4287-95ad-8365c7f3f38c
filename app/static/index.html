@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>社区参与户数 · 差分隐私查询</title>
+<style>
+  :root { --blue:#2563eb; --green:#16a34a; --red:#dc2626; --amber:#d97706; --gray:#6b7280; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: "PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+         background:#f1f5f9; color:#1e293b; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 22px; margin: 8px 0 4px; }
+  .sub { color: var(--gray); font-size: 13px; margin-bottom: 20px; }
+  .card { background:#fff; border-radius:12px; padding:20px; margin-bottom:16px;
+          box-shadow:0 1px 3px rgba(15,23,42,.08); }
+  .card h2 { font-size:16px; margin:0 0 12px; }
+  .status-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; }
+  .stat { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; }
+  .stat .k { font-size:12px; color:var(--gray); }
+  .stat .v { font-size:20px; font-weight:600; margin-top:4px; }
+  button { background:var(--blue); color:#fff; border:0; border-radius:8px;
+           padding:9px 18px; font-size:14px; cursor:pointer; }
+  button:hover { filter:brightness(1.08); }
+  button:disabled { background:#94a3b8; cursor:not-allowed; }
+  input[type=text] { padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px;
+                     font-size:14px; width:260px; }
+  input[type=file] { font-size:13px; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .msg { margin-top:12px; padding:10px 12px; border-radius:8px; font-size:14px; display:none; }
+  .msg.ok   { display:block; background:#f0fdf4; color:var(--green); border:1px solid #bbf7d0; }
+  .msg.err  { display:block; background:#fef2f2; color:var(--red);  border:1px solid #fecaca; }
+  .msg.warn { display:block; background:#fffbeb; color:var(--amber); border:1px solid #fde68a; }
+  .result { margin-top:14px; display:none; background:#eff6ff; border:1px solid #bfdbfe;
+            border-radius:10px; padding:14px; }
+  .result.show { display:block; }
+  .result .num { font-size:30px; font-weight:700; color:var(--blue); }
+  .badge { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; margin-left:8px; }
+  .badge.charge { background:#fee2e2; color:var(--red); }
+  .badge.cache  { background:#dcfce7; color:var(--green); }
+  .hint { font-size:12px; color:var(--gray); margin-top:8px; line-height:1.7; }
+  code { background:#f1f5f9; padding:1px 5px; border-radius:4px; font-size:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>社区参与户数 · 差分隐私查询服务</h1>
+  <div class="sub">
+    拉普拉斯噪声尺度 4 ｜ 每个社区首次查询扣 ε=0.25 ｜ 全期预算 ε=1 ｜
+    本页面不展示原始记录或精确计数
+  </div>
+
+  <div class="card">
+    <h2>服务状态</h2>
+    <div class="status-grid">
+      <div class="stat"><div class="k">数据导入</div><div class="v" id="st-imported">—</div></div>
+      <div class="stat"><div class="k">已用预算 ε</div><div class="v" id="st-spent">—</div></div>
+      <div class="stat"><div class="k">剩余预算 ε</div><div class="v" id="st-remain">—</div></div>
+      <div class="stat"><div class="k">已缓存社区</div><div class="v" id="st-cached">—</div></div>
+    </div>
+    <div class="hint">两个服务实例（8001 / 8002 端口）共享同一 SQLite 预算账本与结果缓存。</div>
+  </div>
+
+  <div class="card">
+    <h2>① 上传单期 CSV（仅可导入一次）</h2>
+    <div class="row">
+      <input type="file" id="csv-file" accept=".csv">
+      <button id="btn-upload">上传导入</button>
+    </div>
+    <div class="hint">
+      需含表头 <code>住户号,社区,是否参与</code>（亦接受 household_id / community / participated）。
+      任一住户号重复将<b>整份拒收</b>；成功导入后数据锁定，再次上传一律拒绝，不得覆盖。
+    </div>
+    <div class="msg" id="upload-msg"></div>
+  </div>
+
+  <div class="card">
+    <h2>② 查询社区参与户数（含噪声）</h2>
+    <div class="row">
+      <input type="text" id="community" placeholder="输入社区名称，如：阳光社区">
+      <button id="btn-query">查询</button>
+    </div>
+    <div class="hint">
+      首次查询某社区扣 ε=0.25 并持久化结果；再次查询返回同一结果、不再扣费。
+      预算用尽后，新社区查询将被拒绝（已缓存社区仍可查）。
+    </div>
+    <div class="msg" id="query-msg"></div>
+    <div class="result" id="query-result">
+      <div>
+        <span style="font-size:14px;color:#475569" id="r-community"></span>
+        <span class="badge" id="r-badge"></span>
+      </div>
+      <div class="num" id="r-count"></div>
+      <div class="hint" id="r-budget"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function refreshStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const s = await r.json();
+    document.getElementById('st-imported').textContent = s.imported ? '已导入 🔒' : '未导入';
+    document.getElementById('st-spent').textContent  = s.budget_spent.toFixed(2) + ' / ' + s.budget_total.toFixed(2);
+    document.getElementById('st-remain').textContent = s.budget_remaining.toFixed(2);
+    document.getElementById('st-cached').textContent = s.cached_communities;
+  } catch (e) { /* 忽略瞬时错误 */ }
+}
+
+function showMsg(id, kind, text) {
+  const el = document.getElementById(id);
+  el.className = 'msg ' + kind;
+  el.textContent = text;
+}
+
+async function readError(resp) {
+  try { const j = await resp.json(); return j.detail || JSON.stringify(j); }
+  catch (e) { return 'HTTP ' + resp.status; }
+}
+
+document.getElementById('btn-upload').onclick = async () => {
+  const f = document.getElementById('csv-file').files[0];
+  if (!f) { showMsg('upload-msg', 'warn', '请先选择 CSV 文件'); return; }
+  const fd = new FormData();
+  fd.append('file', f);
+  const resp = await fetch('/api/upload', { method: 'POST', body: fd });
+  if (resp.ok) {
+    const j = await resp.json();
+    showMsg('upload-msg', 'ok', '✅ ' + j.message);
+  } else {
+    showMsg('upload-msg', 'err', '❌ 导入被拒绝：' + await readError(resp));
+  }
+  refreshStatus();
+};
+
+document.getElementById('btn-query').onclick = async () => {
+  const name = document.getElementById('community').value.trim();
+  const box = document.getElementById('query-result');
+  if (!name) { showMsg('query-msg', 'warn', '请输入社区名称'); box.className = 'result'; return; }
+  const resp = await fetch('/api/query', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ community: name })
+  });
+  if (resp.ok) {
+    const j = await resp.json();
+    showMsg('query-msg', 'ok', '');
+    document.getElementById('query-msg').style.display = 'none';
+    document.getElementById('r-community').textContent = j.community + ' 参与户数（含噪声）';
+    document.getElementById('r-count').textContent = '≈ ' + j.noisy_count.toFixed(2) + ' 户';
+    const badge = document.getElementById('r-badge');
+    if (j.cached) { badge.className = 'badge cache'; badge.textContent = '缓存结果 · 本次扣 ε=0'; }
+    else { badge.className = 'badge charge'; badge.textContent = '首次查询 · 本次扣 ε=' + j.charged; }
+    document.getElementById('r-budget').textContent =
+      '剩余隐私预算 ε=' + j.budget_remaining.toFixed(2) + '（噪声为拉普拉斯分布，尺度 4；结果可能为负或小数，属正常现象）';
+    box.className = 'result show';
+  } else {
+    box.className = 'result';
+    const kind = resp.status === 429 ? 'warn' : 'err';
+    showMsg('query-msg', kind, (resp.status === 429 ? '⛔ ' : '❌ ') + await readError(resp));
+  }
+  refreshStatus();
+};
+
+document.getElementById('community').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btn-query').click();
+});
+
+refreshStatus();
+</script>
+</body>
+</html>
